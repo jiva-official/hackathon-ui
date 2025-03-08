@@ -65,7 +65,7 @@ const AdminDashboard = () => {
       </Paper>
 
       {activeTab === 0 && <ManageProblems />}
-      {activeTab === 1 && <ManageTeams team={hackathonStatus.team} />}
+      {activeTab === 1 && <ManageTeams />}
       {activeTab === 2 && <StartHackathon />}
       {activeTab === 3 && <AssignProblems />}
     </Box>

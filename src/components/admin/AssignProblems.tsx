@@ -18,6 +18,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { api } from '../../services/auth';
+import { useTheme } from '@mui/material/styles';
 
 interface User {
   id: number;
@@ -31,6 +32,7 @@ interface Problem {
 }
 
 const AssignProblems = () => {
+  const theme = useTheme();
   const [users, setUsers] = useState<User[]>([]);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +107,11 @@ const AssignProblems = () => {
               <TableRow 
                 key={user.id}
                 sx={{ 
-                  backgroundColor: user.assignedProblemId ? '#f5f5f5' : 'inherit'
+                  backgroundColor: user.assignedProblemId 
+                    ? theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.1)'  // Lighter grey for dark mode
+                      : 'rgba(0, 0, 0, 0.05)'       // Darker grey for light mode
+                    : 'inherit'
                 }}
               >
                 <TableCell>{user.username}</TableCell>
