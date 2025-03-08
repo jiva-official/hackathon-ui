@@ -16,6 +16,8 @@ import {
   DialogActions,
   CircularProgress,
   Link,
+  Card,
+  CardContent,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { api } from '../../services/auth';
@@ -31,6 +33,15 @@ interface HackathonParticipation {
     submissionTime: string | null;
   } | null;
   active: boolean;
+  selectedProblem?: {
+    id: string;
+    title: string;
+    description: string;
+    track: string;
+    releaseDate: string;
+    requirements: string;
+    deadline: string;
+  };
 }
 
 interface Problem {
@@ -43,6 +54,18 @@ interface Problem {
 interface UserProfile {
   id: string;
   assignedProblemId: string | null;
+}
+
+interface ProblemStatement {
+  id: string;
+  title: string;
+  description: string;
+  track: string;
+  difficulty: string;
+  constraints: string[];
+  sampleInput?: string;
+  sampleOutput?: string;
+  timeLimit: string;
 }
 
 const UserDashboard = () => {
@@ -60,6 +83,9 @@ const UserDashboard = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectProblemDialogOpen, setSelectProblemDialogOpen] = useState(false);
   const [selectedProblemId, setSelectedProblemId] = useState<string>('');
+  const [showNewHackathonBanner, setShowNewHackathonBanner] = useState(false);
+  const [, setSelectedProblemStatement] = useState<ProblemStatement | null>(null);
+
 
   const fetchUserData = async () => {
     try {
@@ -102,6 +128,16 @@ const UserDashboard = () => {
     }
   };
 
+  const fetchProblemStatement = async (problemId: string) => {
+    try {
+      const response = await api.get(`/hackathon/problems/${problemId}`);
+      setSelectedProblemStatement(response.data);
+    } catch (err) {
+      console.error('Failed to fetch problem statement:', err);
+      setError('Failed to load problem statement');
+    }
+  };
+
   useEffect(() => {
     const initializeData = async () => {
       const profile = await fetchUserProfile();
@@ -114,6 +150,12 @@ const UserDashboard = () => {
     initializeData();
   }, []);
 
+  const isHackathonEnded = (hackathon: HackathonParticipation) => {
+    const now = new Date().getTime();
+    const end = new Date(hackathon.endTime).getTime();
+    return now > end;
+  };
+
   useEffect(() => {
     if (!activeHackathon) return;
 
@@ -123,24 +165,19 @@ const UserDashboard = () => {
       const timeLeft = end - now;
 
       if (timeLeft <= 0) {
-        setTimeRemaining('Time Up!');
+        // Move ended hackathon to previous hackathons
+        setHackathonParticipations(prev => [
+          ...prev.filter(h => h.hackathonId !== activeHackathon.hackathonId),
+          { ...activeHackathon, active: false }
+        ]);
+        setActiveHackathon(null);
         return;
       }
 
       const hours = Math.floor(timeLeft / (1000 * 60 * 60));
       const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-
-      const totalDuration = new Date(activeHackathon.endTime).getTime() - 
-                           new Date(activeHackathon.startTime).getTime();
-      const percentageLeft = (timeLeft / totalDuration) * 100;
-
       setTimeRemaining(`${hours}:${minutes}:${seconds}`);
-
-      // Alert if less than 20% time remaining
-      if (percentageLeft < 20 && !activeHackathon.solution) {
-        // You might want to show a more prominent alert here
-      }
     };
 
     const timer = setInterval(updateTimer, 1000);
@@ -148,16 +185,18 @@ const UserDashboard = () => {
   }, [activeHackathon]);
 
   const handleSubmitSolution = async () => {
-    if (!activeHackathon || !submission.githubUrl) return;
+    if (!activeHackathon || !submission.githubUrl || !userProfile) return;
 
     try {
-      await api.post(`/hackathon/submit/${activeHackathon.hackathonId}`, null, {
+      await api.post(`/hackathon/submit/${userProfile.id}`, null, {
         params: {
           githubUrl: submission.githubUrl,
           hostedUrl: submission.hostedUrl || undefined
         }
       });
       setSubmitDialogOpen(false);
+      // Stop the timer
+      setTimeRemaining('Submitted');
       // Refresh data immediately after submission
       await fetchUserData();
     } catch (err) {
@@ -170,10 +209,14 @@ const UserDashboard = () => {
     if (!selectedProblemId || !userProfile) return;
 
     try {
-      await api.post(`/hackathon/problems/${selectedProblemId}/select`, null, {
-        params: { userId: userProfile.id }
-      });
+      // Using the correct endpoint for problem selection
+      await api.post(`/hackathon/problems/${selectedProblemId}/${userProfile.id}`);
       setSelectProblemDialogOpen(false);
+      
+      // Fetch the selected problem statement
+      await fetchProblemStatement(selectedProblemId);
+      
+      // Refresh user profile to get updated assignedProblemId
       await fetchUserProfile();
     } catch (err) {
       console.error('Failed to select problem:', err);
@@ -181,93 +224,29 @@ const UserDashboard = () => {
     }
   };
 
+  const handleEnterHackathon = async () => {
+    try {
+      const profile = await fetchUserProfile();
+      setShowNewHackathonBanner(false);
+      
+      if (profile?.assignedProblemId) {
+        // If problem is already assigned, fetch and display it
+        await fetchProblemStatement(profile.assignedProblemId);
+      } else {
+        // If no problem assigned, show problem selection
+        await fetchProblems();
+        setSelectProblemDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to enter hackathon:', err);
+      setError('Failed to enter hackathon');
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
         <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!userProfile?.assignedProblemId) {
-    return (
-      <Box>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-            {error}
-          </Alert>
-        )}
-        
-        <Paper sx={{ p: 3, mb: 3 }} elevation={3}>
-          <Typography variant="h5" gutterBottom>
-            Problem Statement Required
-          </Typography>
-          <Typography paragraph>
-            You need to select a problem statement before participating in the hackathon.
-            You can either:
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Button
-              variant="contained"
-              onClick={() => setSelectProblemDialogOpen(true)}
-            >
-              Select Problem Statement
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => window.location.reload()}
-            >
-              Refresh Status
-            </Button>
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            Note: If you cannot select a problem statement, please contact your administrator.
-          </Typography>
-        </Paper>
-
-        <Dialog
-          open={selectProblemDialogOpen}
-          onClose={() => setSelectProblemDialogOpen(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Select Problem Statement</DialogTitle>
-          <DialogContent>
-            {problems.map((problem) => (
-              <Paper
-                key={problem.id}
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  cursor: 'pointer',
-                  border: selectedProblemId === problem.id ? 2 : 0,
-                  borderColor: 'primary.main'
-                }}
-                onClick={() => setSelectedProblemId(problem.id)}
-              >
-                <Typography variant="h6">{problem.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Track: {problem.track}
-                </Typography>
-                <Typography variant="body1" sx={{ mt: 1 }}>
-                  {problem.description}
-                </Typography>
-              </Paper>
-            ))}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setSelectProblemDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSelectProblem}
-              disabled={!selectedProblemId}
-              variant="contained"
-            >
-              Select Problem
-            </Button>
-          </DialogActions>
-        </Dialog>
       </Box>
     );
   }
@@ -280,78 +259,155 @@ const UserDashboard = () => {
         </Alert>
       )}
 
-      {activeHackathon ? (
-        <Paper sx={{ p: 3, mb: 3 }} elevation={3}>
-          <Typography variant="h5" gutterBottom>
-            Active Hackathon: {activeHackathon.hackathonName}
-          </Typography>
-          <Typography variant="h6" color={
-            timeRemaining === 'Time Up!' ? 'error' : 
-            parseInt(timeRemaining.split(':')[0]) < 2 ? 'warning.main' : 'primary'
-          }>
-            Time Remaining: {timeRemaining}
-          </Typography>
-          {!activeHackathon.solution && (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setSubmitDialogOpen(true)}
-              sx={{ mt: 2 }}
-            >
-              Submit Solution
-            </Button>
-          )}
-          {activeHackathon.solution && (
-            <Box sx={{ mt: 2 }}>
-              <Chip
-                label={`Solution submitted at ${new Date(activeHackathon.solution.submissionTime!).toLocaleString()}`}
-                color="success"
-                sx={{ mr: 1 }}
-              />
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                GitHub URL: <Link href={activeHackathon.solution.githubUrl!} target="_blank" rel="noopener">
-                  {activeHackathon.solution.githubUrl}
-                </Link>
-              </Typography>
-              {activeHackathon.solution.hostedUrl && (
-                <Typography variant="body2">
-                  Hosted URL: <Link href={activeHackathon.solution.hostedUrl} target="_blank" rel="noopener">
-                    {activeHackathon.solution.hostedUrl}
-                  </Link>
+      {/* Show active hackathon invitation first */}
+      {showNewHackathonBanner && (
+        <Card sx={{ mb: 3, p: 2, bgcolor: 'primary.light' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h5" gutterBottom>
+                  New Hackathon Available!
                 </Typography>
-              )}
+                <Typography variant="body1">
+                  Click enter to participate in the latest hackathon
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleEnterHackathon}
+              >
+                Enter Hackathon
+              </Button>
             </Box>
-          )}
-        </Paper>
-      ) : (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          No active hackathon at the moment
-        </Alert>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Active Hackathon Display */}
+      {activeHackathon && (
+        <Box sx={{ mb: 3 }}>
+          <Paper sx={{ p: 3 }} elevation={3}>
+            <Typography variant="h5" gutterBottom>
+              Active Hackathon: {activeHackathon.hackathonName}
+            </Typography>
+            
+            {activeHackathon.selectedProblem ? (
+              <>
+                <ProblemStatementView 
+                  problem={{
+                    id: activeHackathon.selectedProblem.id,
+                    title: activeHackathon.selectedProblem.title,
+                    description: activeHackathon.selectedProblem.description,
+                    track: activeHackathon.selectedProblem.track,
+                    difficulty: "Standard", // You might want to add this to the API response
+                    constraints: [activeHackathon.selectedProblem.requirements],
+                    timeLimit: new Date(activeHackathon.selectedProblem.deadline).toLocaleString()
+                  }} 
+                />
+                {!activeHackathon.solution && timeRemaining !== 'Submitted' && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="h6" color={
+                      parseInt(timeRemaining.split(':')[0]) < 2 ? 'warning.main' : 'primary'
+                    }>
+                      Time Remaining: {timeRemaining}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => setSubmitDialogOpen(true)}
+                      sx={{ mt: 2 }}
+                    >
+                      Submit Solution
+                    </Button>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body1" gutterBottom>
+                  You need to select a problem statement to start the hackathon.
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={() => setSelectProblemDialogOpen(true)}
+                >
+                  Select Problem
+                </Button>
+              </Box>
+            )}
+            
+            {activeHackathon.solution && (
+              <SubmissionCard 
+                solution={{
+                  githubUrl: activeHackathon.solution.githubUrl ?? '',
+                  hostedUrl: activeHackathon.solution.hostedUrl ?? undefined,
+                  submissionTime: activeHackathon.solution.submissionTime ?? '',
+                }}
+                endTime={activeHackathon.endTime}
+              />
+            )}
+          </Paper>
+        </Box>
+      )}
+
+      {/* Default dashboard state */}
+      {!activeHackathon && !showNewHackathonBanner && (
+        <Card sx={{ p: 3, mb: 3, textAlign: 'center' }}>
+          <CardContent>
+            <Typography variant="h5" gutterBottom>
+              No Active Hackathons
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              You currently don't have any active hackathons.
+              Please wait for an invitation to participate in the next hackathon.
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Previous Hackathons Section */}
       <Accordion>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography>Previous Hackathons</Typography>
         </AccordionSummary>
         <AccordionDetails>
           {hackathonParticipations
-            .filter(h => !h.active)
+            .filter(h => !h.active || isHackathonEnded(h))
             .map((hackathon) => (
-              <Paper key={hackathon.hackathonId} sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6">{hackathon.hackathonName}</Typography>
-                <Typography>
-                  {new Date(hackathon.startTime).toLocaleString()} - 
-                  {new Date(hackathon.endTime).toLocaleString()}
-                </Typography>
-                {hackathon.solution && (
-                  <Box sx={{ mt: 1 }}>
-                    <Chip
-                      label={`Submitted: ${new Date(hackathon.solution.submissionTime!).toLocaleString()}`}
-                      color="success"
+              <Card key={hackathon.hackathonId} sx={{ mb: 2 }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                      {hackathon.hackathonName}
+                    </Typography>
+                    <Chip 
+                      label={hackathon.solution ? "Solution Submitted" : "Not Submitted"}
+                      color={hackathon.solution ? "success" : "error"}
+                      size="small"
                     />
                   </Box>
-                )}
-              </Paper>
+                  <Typography variant="body2" color="text.secondary">
+                    {new Date(hackathon.startTime).toLocaleString()} - 
+                    {new Date(hackathon.endTime).toLocaleString()}
+                  </Typography>
+                  {hackathon.solution && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2">
+                        Submitted at: {new Date(hackathon.solution.submissionTime!).toLocaleString()}
+                      </Typography>
+                      <Typography variant="body2">
+                        GitHub URL: <Link href={hackathon.solution.githubUrl!}>{hackathon.solution.githubUrl}</Link>
+                      </Typography>
+                      {hackathon.solution.hostedUrl && (
+                        <Typography variant="body2">
+                          Hosted URL: <Link href={hackathon.solution.hostedUrl}>{hackathon.solution.hostedUrl}</Link>
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
             ))}
         </AccordionDetails>
       </Accordion>
@@ -387,8 +443,130 @@ const UserDashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Problem Selection Dialog */}
+      <Dialog 
+        open={selectProblemDialogOpen} 
+        onClose={() => setSelectProblemDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Select Problem Statement</DialogTitle>
+        <DialogContent>
+          {problems.map((problem) => (
+            <Card 
+              key={problem.id} 
+              sx={{ 
+                mb: 2, 
+                cursor: 'pointer',
+                border: selectedProblemId === problem.id ? '2px solid primary.main' : 'none'
+              }}
+              onClick={() => setSelectedProblemId(problem.id)}
+            >
+              <CardContent>
+                <Typography variant="h6">{problem.title}</Typography>
+                <Chip label={`Track: ${problem.track}`} size="small" sx={{ mr: 1 }} />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {problem.description}
+                </Typography>
+              </CardContent>
+            </Card>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectProblemDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleSelectProblem}
+            disabled={!selectedProblemId}
+            variant="contained"
+          >
+            Select Problem
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
+
+const SubmissionCard = ({ solution, endTime }: { 
+  solution: { 
+    githubUrl: string; 
+    hostedUrl?: string; 
+    submissionTime: string; 
+  }; 
+  endTime: string;
+}) => {
+  const submittedBeforeEnd = new Date(solution.submissionTime) < new Date(endTime);
+
+  return (
+    <Card sx={{ mt: 3, bgcolor: 'success.light', color: 'success.contrastText' }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          Solution Submitted Successfully!
+        </Typography>
+        {submittedBeforeEnd && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Congratulations! You submitted your solution before the deadline.
+          </Alert>
+        )}
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="body1">
+            Submitted at: {new Date(solution.submissionTime).toLocaleString()}
+          </Typography>
+          <Typography variant="body1">
+            GitHub URL: <Link href={solution.githubUrl} target="_blank" rel="noopener" sx={{ color: 'inherit' }}>
+              {solution.githubUrl}
+            </Link>
+          </Typography>
+          {solution.hostedUrl && (
+            <Typography variant="body1">
+              Hosted URL: <Link href={solution.hostedUrl} target="_blank" rel="noopener" sx={{ color: 'inherit' }}>
+                {solution.hostedUrl}
+              </Link>
+            </Typography>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+const ProblemStatementView = ({ problem }: { problem: ProblemStatement }) => (
+  <Paper sx={{ p: 3, mb: 3, bgcolor: 'grey.900', color: 'white' }}>
+    <Typography variant="h5" gutterBottom>
+      {problem.title}
+    </Typography>
+    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+      <Chip label={`Track: ${problem.track}`} color="primary" size="small" />
+      <Chip label={`Difficulty: ${problem.difficulty}`} color="secondary" size="small" />
+      <Chip label={`Time Limit: ${problem.timeLimit}`} color="warning" size="small" />
+    </Box>
+    <Typography variant="body1" sx={{ mb: 2, whiteSpace: 'pre-wrap' }}>
+      {problem.description}
+    </Typography>
+    {problem.constraints && (
+      <>
+        <Typography variant="h6" gutterBottom>Constraints:</Typography>
+        <ul>
+          {problem.constraints.map((constraint, index) => (
+            <li key={index}>{constraint}</li>
+          ))}
+        </ul>
+      </>
+    )}
+    {problem.sampleInput && (
+      <Box sx={{ bgcolor: 'grey.800', p: 2, borderRadius: 1, mb: 2 }}>
+        <Typography variant="h6" gutterBottom>Sample Input:</Typography>
+        <pre style={{ margin: 0 }}>{problem.sampleInput}</pre>
+      </Box>
+    )}
+    {problem.sampleOutput && (
+      <Box sx={{ bgcolor: 'grey.800', p: 2, borderRadius: 1 }}>
+        <Typography variant="h6" gutterBottom>Sample Output:</Typography>
+        <pre style={{ margin: 0 }}>{problem.sampleOutput}</pre>
+      </Box>
+    )}
+  </Paper>
+);
 
 export default UserDashboard;

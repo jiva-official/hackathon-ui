@@ -31,7 +31,7 @@ const Layout: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
-      <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
+      <Container component="main" sx={{ flexGrow: 1, py: 4, px: { xs: 2, sm: 3, md: 4 } }}>
         <Outlet />
       </Container>
     </Box>

@@ -26,13 +26,33 @@ const AdminDashboard = () => {
       try {
         const response = await api.get('/hackathon/status');
         setHackathonStatus(response.data);
+        
+        // Check if hackathon is active, then verify all solutions
+        if (response.data?.isActive) {
+          const solutionsResponse = await api.get('/hackathon/solutions/status');
+          const allSubmitted = solutionsResponse.data.allSubmitted;
+          setAllSolutionsSubmitted(allSubmitted);
+
+          // If all solutions are submitted, close the hackathon
+          if (allSubmitted) {
+            await api.post('/hackathon/close');
+            // Refresh hackathon status
+            const updatedStatus = await api.get('/hackathon/status');
+            setHackathonStatus(updatedStatus.data);
+          }
+        }
       } catch (err) {
         setError('Failed to fetch hackathon status');
       } finally {
         setLoading(false);
       }
     };
+
+    // Poll for status every 5 minutes
     fetchStatus();
+    const interval = setInterval(fetchStatus, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <CircularProgress />;
@@ -76,3 +96,7 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+function setAllSolutionsSubmitted(_allSubmitted: any) {
+  throw new Error('Function not implemented.');
+}

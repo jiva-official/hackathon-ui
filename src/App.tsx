@@ -18,7 +18,7 @@ function App() {
         <CssBaseline />
         <NotificationProvider>
           <Routes>
-            <Route path="/" element={<Layout></Layout>}>
+            <Route path="/" element={<Layout />}>
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
               <Route index element={
