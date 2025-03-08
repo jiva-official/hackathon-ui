@@ -3,8 +3,13 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import Header from './Header';
 import { useAuth } from '../../hooks/useAuth';
+import React, { ReactNode } from 'react';
 
-const Layout = () => {
+interface LayoutProps {
+    children: ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,6 +37,7 @@ const Layout = () => {
       <Header />
       <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
         <Outlet />
+        {children}
       </Container>
     </Box>
   );
