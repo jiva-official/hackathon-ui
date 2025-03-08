@@ -15,8 +15,12 @@ import {
   CircularProgress,
   Alert,
   Paper,
-  Divider
+  Divider,
+  Button,
+  DialogActions,
+  DialogContentText,
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { api } from '../../services/auth';
 
 interface TeamMember {
@@ -44,6 +48,8 @@ const ManageTeams = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -66,6 +72,30 @@ const ManageTeams = () => {
       setDialogOpen(true);
     } catch (err) {
       setError('Failed to fetch team details');
+    }
+  };
+
+  const handleDeleteClick = (team: Team, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent opening team details
+    setTeamToDelete(team);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!teamToDelete) return;
+
+    try {
+      await api.delete(`/users/${teamToDelete.id}`);
+      setTeams(teams.filter(team => team.id !== teamToDelete.id));
+      setDeleteDialogOpen(false);
+      setTeamToDelete(null);
+      // Close details dialog if the deleted team was being viewed
+      if (selectedTeam?.id === teamToDelete.id) {
+        setDialogOpen(false);
+        setSelectedTeam(null);
+      }
+    } catch (err) {
+      setError('Failed to delete team');
     }
   };
 
@@ -109,8 +139,16 @@ const ManageTeams = () => {
       >
         {selectedTeam && (
           <>
-            <DialogTitle>
-              Team Details: {selectedTeam.teamName}
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Team Details: {selectedTeam.teamName}</span>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={(e) => handleDeleteClick(selectedTeam, e)}
+              >
+                Delete Team
+              </Button>
             </DialogTitle>
             <DialogContent>
               <Paper sx={{ p: 2, mb: 2 }}>
@@ -190,6 +228,34 @@ const ManageTeams = () => {
             </DialogContent>
           </>
         )}
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirm Team Deletion</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Warning: You are about to delete the team "{teamToDelete?.teamName}". 
+            This action cannot be undone. All team data, including submissions and progress, 
+            will be permanently deleted.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+          >
+            Delete Team
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

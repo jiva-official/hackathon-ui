@@ -12,6 +12,7 @@ import ManageProblems from './ManageProblems';
 import ManageTeams from './ManageTeams';
 import StartHackathon from './StartHackathon';
 import AssignProblems from './AssignProblems';
+import HackathonHistory from './HackathonHistory';
 import { api } from '../../services/auth';
 
 const AdminDashboard = () => {
@@ -61,6 +62,7 @@ const AdminDashboard = () => {
           <Tab label="Manage Teams" />
           <Tab label="Start Hackathon" />
           <Tab label="Assign Problems" />
+          <Tab label="Hackathon History" />
         </Tabs>
       </Paper>
 
@@ -68,6 +70,7 @@ const AdminDashboard = () => {
       {activeTab === 1 && <ManageTeams />}
       {activeTab === 2 && <StartHackathon />}
       {activeTab === 3 && <AssignProblems />}
+      {activeTab === 4 && <HackathonHistory />}
     </Box>
   );
 };

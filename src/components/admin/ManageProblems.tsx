@@ -11,9 +11,7 @@ import {
   Card,
   CardContent,
   Typography,
-  IconButton,
-  Alert
-} from '@mui/material';
+  IconButton} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNotification } from '../../contexts/NotificationContext';
 import api from '../../services/api';

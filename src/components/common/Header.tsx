@@ -2,6 +2,7 @@ import { AppBar, Toolbar, Typography, Button, Box, IconButton } from '@mui/mater
 import { useNavigate } from 'react-router-dom';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -39,6 +40,14 @@ const Header = () => {
               >
                 {user?.username} ({user?.role === 'ROLE_ADMIN' ? 'Admin' : 'Team'})
               </Typography>
+              <Button
+                color="inherit"
+                startIcon={<AccountCircleIcon />}
+                onClick={() => navigate('/profile')}
+                sx={{ mr: 2 }}
+              >
+                Profile
+              </Button>
               <Button 
                 color="inherit" 
                 onClick={handleLogout}

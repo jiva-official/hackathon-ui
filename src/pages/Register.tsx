@@ -7,8 +7,7 @@ import {
   Typography,
   Container,
   Paper,
-  Alert,
-  Grid
+  Alert
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../contexts/NotificationContext';

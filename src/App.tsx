@@ -9,6 +9,7 @@ import UserDashboard from './components/user/Dashboard';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ErrorPage from './components/common/ErrorPage';
 import ProtectedRoute from './routes/ProtectedRoute';
+import Profile from './components/profile/Profile';
 
 function App() {
   return (
@@ -28,6 +29,11 @@ function App() {
               <Route path="admin" element={
                 <ProtectedRoute requireAdmin>
                   <AdminDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="profile" element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<ErrorPage />} />

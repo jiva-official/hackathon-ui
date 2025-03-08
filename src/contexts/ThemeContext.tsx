@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { ThemeProvider as MuiThemeProvider, createTheme, Theme } from '@mui/material';
+import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material';
 
 interface ThemeContextType {
   toggleTheme: () => void;
