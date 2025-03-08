@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -18,7 +18,7 @@ function App() {
         <CssBaseline />
         <NotificationProvider>
           <Routes>
-            <Route path="/" element={<Layout><Outlet /></Layout>}>
+            <Route path="/" element={<Layout></Layout>}>
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
               <Route index element={
