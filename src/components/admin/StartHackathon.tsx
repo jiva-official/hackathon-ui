@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -15,13 +15,17 @@ import {
   SelectChangeEvent
 } from '@mui/material';
 import { api } from '../../services/auth';
+import axios from 'axios';
+
+interface HackathonParticipation {
+  active: boolean;
+  hackathonName: string;
+}
 
 interface Team {
   id: string;
   teamName: string;
-  hackathonParticipations?: {
-    active: boolean;
-  }[];
+  hackathonParticipations?: HackathonParticipation[];
 }
 
 const StartHackathon = () => {
@@ -61,27 +65,63 @@ const StartHackathon = () => {
     fetchData();
   }, []);
 
+  const clearMessages = useCallback(() => {
+    setError('');
+    setSuccess('');
+  }, []);
+
   const handleStartHackathon = async () => {
     if (!hackathonName || !duration || selectedTeams.length === 0) {
       setError('Please fill all required fields');
+      setSuccess('');
       return;
     }
 
     try {
-      await api.post('/hackathon/start', null, {
-        params: {
-          hackathonName,
-          teamNames: selectedTeams.join(','),
-          durationInHours: parseInt(duration)
+      clearMessages();
+      
+      const durationInHours = parseInt(duration);
+      if (isNaN(durationInHours) || durationInHours <= 0) {
+        setError('Please enter a valid duration');
+        return;
+      }
+
+      const params = {
+        hackathonName,
+        durationInHours: durationInHours.toString(),
+        teamNames: selectedTeams.join(',')
+      };
+
+      const response = await api.post('/hackathon/start', null, { 
+        params,
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
-      setSuccess('Hackathon started successfully!');
-      // Reset form
-      setHackathonName('');
-      setDuration('');
-      setSelectedTeams([]);
+
+      // Check if response is successful
+      if (response && response.status === 200) {
+        // Reset form
+        setHackathonName('');
+        setDuration('');
+        setSelectedTeams([]);
+        
+        setSuccess('Hackathon started successfully!');
+      } else {
+        throw new Error('Failed to start hackathon');
+      }
     } catch (err) {
-      setError('Failed to start hackathon');
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data?.message || 'Failed to start hackathon';
+        setError(errorMessage);
+        console.error('Axios error:', {
+          status: err.response?.status,
+          message: errorMessage
+        });
+      } else {
+        setError('Failed to start hackathon');
+        console.error('Non-axios error:', err);
+      }
     }
   };
 
@@ -198,3 +238,4 @@ const StartHackathon = () => {
 };
 
 export default StartHackathon;
+
