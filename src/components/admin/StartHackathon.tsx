@@ -31,25 +31,34 @@ const StartHackathon = () => {
   const [duration, setDuration] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [, setActiveHackathons] = useState([]);
 
   const isTeamInActiveHackathon = (team: Team) => {
     return team.hackathonParticipations?.some(h => h.active) ?? false;
   };
 
   useEffect(() => {
-    const fetchTeams = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/users');
-        const teamsWithStatus = response.data.map((team: Team) => ({
+        const [teamsResponse, hackathonsResponse] = await Promise.all([
+          api.get('/users'),
+          api.get('/hackathon/all')
+        ]);
+
+        const teamsWithStatus = teamsResponse.data.map((team: Team) => ({
           ...team,
           hasActiveHackathon: team.hackathonParticipations?.some(h => h.active) ?? false
         }));
         setTeams(teamsWithStatus);
+
+        // Filter active hackathons
+        const active = hackathonsResponse.data.filter((h: any) => h.active);
+        setActiveHackathons(active);
       } catch (err) {
-        setError('Failed to fetch teams');
+        setError('Failed to fetch data');
       }
     };
-    fetchTeams();
+    fetchData();
   }, []);
 
   const handleStartHackathon = async () => {

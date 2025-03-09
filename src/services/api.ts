@@ -1,13 +1,13 @@
 import axios from 'axios';
-import { User, Problem, LoginRequest, LoginResponse, RegisterResponse } from '../types/types';
+import config from '../config/config';
+import { User, Problem, RegisterResponse } from '../types/types';
 
-const BASE_URL = 'http://localhost:8080/api';
-
-const api = axios.create({
-  baseURL: BASE_URL,
+export const api = axios.create({
+  baseURL: config.API_URL,
   headers: {
     'Content-Type': 'application/json',
-  },
+    // Remove cache-control header
+  }
 });
 
 api.interceptors.request.use((config) => {
@@ -19,9 +19,12 @@ api.interceptors.request.use((config) => {
 });
 
 export const authAPI = {
-  login: (data: LoginRequest) => 
-    api.post<LoginResponse>('/auth/login', data),
-  
+  login: (credentials: { username: string; password: string }) =>
+    axios.post(`${config.API_URL}/auth/login`, credentials, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }),
   register: (data: Partial<User>) => 
     api.post<RegisterResponse>('/auth/register', data),
 };

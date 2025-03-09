@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { create } from 'zustand';
 import { jwtDecode } from 'jwt-decode';
+import config from '../config/config';
 
 interface AuthState {
   token: string | null;
@@ -18,7 +19,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   login: async (username: string, password: string) => {
     try {
-      const response = await axios.post('http://localhost:8080/api/auth/login', {
+      const response = await axios.post(`${config.API_URL}/auth/login`, {
         username,
         password
       });
@@ -41,7 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   register: async (userData) => {
     try {
-      await axios.post('http://localhost:8080/api/auth/register', userData);
+      await axios.post(`${config.API_URL}/auth/register`, userData);
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -51,7 +52,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 // API instance with auth header
 export const api = axios.create({
-  baseURL: 'http://localhost:8080/api'
+  baseURL: config.API_URL
 });
 
 api.interceptors.request.use((config) => {

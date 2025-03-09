@@ -55,6 +55,10 @@ const AdminDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleTabChange = (_: any, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
   if (loading) return <CircularProgress />;
 
   return (
@@ -76,15 +80,39 @@ const AdminDashboard = () => {
         </Paper>
       )}
 
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-          <Tab label="Manage Problems" />
-          <Tab label="Manage Teams" />
-          <Tab label="Start Hackathon" />
-          <Tab label="Assign Problems" />
-          <Tab label="Hackathon History" />
-        </Tabs>
-      </Paper>
+      <Box sx={{ width: '100%' }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: 'divider',
+          maxWidth: '100%',
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'background.paper',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'primary.light',
+            borderRadius: '4px',
+          },
+        }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            aria-label="admin dashboard tabs"
+          >
+            <Tab label="Manage Problems" />
+            <Tab label="Manage Teams" />
+            <Tab label="Start Hackathon" />
+            <Tab label="Assign Problems" />
+            <Tab label="Hackathon History" />
+          </Tabs>
+        </Box>
+      </Box>
 
       {activeTab === 0 && <ManageProblems />}
       {activeTab === 1 && <ManageTeams />}

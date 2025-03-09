@@ -55,7 +55,7 @@ const Register = () => {
   return (
     <Container component="main" maxWidth="md">
       <Box sx={{ mt: 8, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
+        <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 } }}>
           <Typography component="h1" variant="h5" align="center" gutterBottom>
             Team Registration
           </Typography>
@@ -63,7 +63,11 @@ const Register = () => {
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+            <Box sx={{ 
+              display: 'grid', 
+              gap: 2, 
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }
+            }}>
               <TextField
                 required
                 fullWidth
@@ -101,11 +105,24 @@ const Register = () => {
             </Typography>
 
             {formData.teamMembers.map((member, index) => (
-              <Box key={index} sx={{ mb: 3, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
+              <Box key={index} sx={{ 
+                mb: 3, 
+                p: 2, 
+                border: '1px solid #ddd', 
+                borderRadius: 1 
+              }}>
                 <Typography variant="subtitle1" gutterBottom>
                   {index === 0 ? 'Team Leader' : `Member ${index + 1}`}
                 </Typography>
-                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                <Box sx={{ 
+                  display: 'grid', 
+                  gap: 2, 
+                  gridTemplateColumns: { 
+                    xs: '1fr',
+                    sm: 'repeat(2, 1fr)', 
+                    md: 'repeat(3, 1fr)' 
+                  }
+                }}>
                   <TextField
                     required
                     label="Name"
