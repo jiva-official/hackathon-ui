@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User, Problem, LoginRequest, LoginResponse, RegisterResponse } from '../types/types';
 
-const BASE_URL = 'https://hackathon-api-v1-0.onrender.com/api';
+const BASE_URL = 'http://139.59.6.252:8080/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
