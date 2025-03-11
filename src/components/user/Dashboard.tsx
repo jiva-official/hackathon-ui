@@ -68,6 +68,9 @@ interface ProblemStatement {
   timeLimit: string;
 }
 
+// Add a polling mechanism to check for updates
+const POLLING_INTERVAL = 30000; // 30 seconds
+
 const UserDashboard = () => {
   const [hackathonParticipations, setHackathonParticipations] = useState<HackathonParticipation[]>([]);
   const [activeHackathon, setActiveHackathon] = useState<HackathonParticipation | null>(null);
@@ -85,7 +88,39 @@ const UserDashboard = () => {
   const [selectedProblemId, setSelectedProblemId] = useState<string>('');
   const [showNewHackathonBanner, setShowNewHackathonBanner] = useState(false);
   const [, setSelectedProblemStatement] = useState<ProblemStatement | null>(null);
+  const [success, setSuccess] = useState<string>('');
 
+  // Add this helper function at the top level
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDateWithTimezone = (date: string) => {
+    // Create a date object in UTC
+    const utcDate = new Date(date);
+    
+    // Format the date in user's local timezone with timezone name
+    return new Date(utcDate).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
+  };
+
+  // For timer calculations, convert UTC to local time
+  const convertUTCToLocal = (utcDate: string): Date => {
+    return new Date(utcDate);
+  };
 
   const fetchUserData = async () => {
     try {
@@ -152,20 +187,20 @@ const UserDashboard = () => {
 
   const isHackathonEnded = (hackathon: HackathonParticipation) => {
     const now = new Date().getTime();
-    const end = new Date(hackathon.endTime).getTime();
+    const end = convertUTCToLocal(hackathon.endTime).getTime();
     return now > end;
   };
 
+  // Update the timer effect
   useEffect(() => {
     if (!activeHackathon) return;
 
     const updateTimer = () => {
-      const now = new Date().getTime();
-      const end = new Date(activeHackathon.endTime).getTime();
-      const timeLeft = end - now;
+      const now = new Date();
+      const end = convertUTCToLocal(activeHackathon.endTime);
+      const timeLeft = end.getTime() - now.getTime();
 
       if (timeLeft <= 0) {
-        // Move ended hackathon to previous hackathons
         setHackathonParticipations(prev => [
           ...prev.filter(h => h.hackathonId !== activeHackathon.hackathonId),
           { ...activeHackathon, active: false }
@@ -174,31 +209,85 @@ const UserDashboard = () => {
         return;
       }
 
-      const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-      setTimeRemaining(`${hours}:${minutes}:${seconds}`);
+      // Convert milliseconds to hours, minutes, seconds
+      const totalMilliseconds = timeLeft;
+      const totalHours = Math.floor(totalMilliseconds / (1000 * 60 * 60));
+      const totalMinutes = Math.floor((totalMilliseconds % (1000 * 60 * 60)) / (1000 * 60));
+      const totalSeconds = Math.floor((totalMilliseconds % (1000 * 60)) / 1000);
+
+      // Format with leading zeros
+      const formattedHours = String(totalHours).padStart(2, '0');
+      const formattedMinutes = String(totalMinutes).padStart(2, '0');
+      const formattedSeconds = String(totalSeconds).padStart(2, '0');
+
+      setTimeRemaining(`${formattedHours}:${formattedMinutes}:${formattedSeconds}`);
+
+      // Log time details for verification with timezone info
+      if (totalHours !== parseInt(timeRemaining.split(':')[0])) {
+        console.log('Time details:', {
+          localTime: now.toLocaleString(),
+          endTime: end.toLocaleString(),
+          userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          remaining: {
+            hours: totalHours,
+            minutes: totalMinutes,
+            seconds: totalSeconds
+          }
+        });
+      }
     };
 
+    // Update immediately and then set interval
+    updateTimer();
     const timer = setInterval(updateTimer, 1000);
+    
+    // Log initial time values for verification
+    console.log('Timer initialized:', {
+      startTime: formatDateWithTimezone(activeHackathon.startTime),
+      endTime: formatDateWithTimezone(activeHackathon.endTime),
+      currentTime: new Date().toLocaleString(),
+      userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
+
     return () => clearInterval(timer);
   }, [activeHackathon]);
+
+  // Add polling effect to check for updates
+  useEffect(() => {
+    const pollForUpdates = async () => {
+      await fetchUserData();
+    };
+
+    // Initial fetch
+    pollForUpdates();
+
+    // Set up polling interval
+    const intervalId = setInterval(pollForUpdates, POLLING_INTERVAL);
+
+    // Cleanup on unmount
+    return () => clearInterval(intervalId);
+  }, []); // Empty dependency array to run only on mount
 
   const handleSubmitSolution = async () => {
     if (!activeHackathon || !submission.githubUrl || !userProfile) return;
 
     try {
-      await api.post(`/hackathon/submit/${userProfile.id}`, null, {
+      const response = await api.post(`/hackathon/submit/${userProfile.id}`, null, {
         params: {
           githubUrl: submission.githubUrl,
           hostedUrl: submission.hostedUrl || undefined
         }
       });
-      setSubmitDialogOpen(false);
-      // Stop the timer
-      setTimeRemaining('Submitted');
-      // Refresh data immediately after submission
-      await fetchUserData();
+      
+      if (response.status === 200) {
+        setSubmitDialogOpen(false);
+        // Stop the timer
+        setTimeRemaining('Submitted');
+        // Show success message
+        setSuccess('Solution submitted successfully! You can view your submission details below.');
+        // Refresh data immediately after submission
+        await fetchUserData();
+      }
     } catch (err) {
       console.error('Failed to submit solution:', err);
       setError('Failed to submit solution');
@@ -209,14 +298,15 @@ const UserDashboard = () => {
     if (!selectedProblemId || !userProfile) return;
 
     try {
-      // Using the correct endpoint for problem selection
       await api.post(`/hackathon/problems/${selectedProblemId}/${userProfile.id}`);
       setSelectProblemDialogOpen(false);
       
-      // Fetch the selected problem statement
-      await fetchProblemStatement(selectedProblemId);
+      // Immediately fetch updated data
+      await Promise.all([
+        fetchUserData(),
+        fetchProblemStatement(selectedProblemId)
+      ]);
       
-      // Refresh user profile to get updated assignedProblemId
       await fetchUserProfile();
     } catch (err) {
       console.error('Failed to select problem:', err);
@@ -243,6 +333,33 @@ const UserDashboard = () => {
     }
   };
 
+  // Add a function to verify time synchronization
+  const verifyTimeSync = (hackathon: HackathonParticipation) => {
+    const now = new Date().getTime();
+    const start = convertUTCToLocal(hackathon.startTime).getTime();
+    const end = convertUTCToLocal(hackathon.endTime).getTime();
+    const totalDuration = end - start;
+    const elapsed = now - start;
+    const remaining = end - now;
+
+    console.log('Time verification:', {
+      userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      totalDuration: totalDuration / (1000 * 60 * 60) + ' hours',
+      elapsed: elapsed / (1000 * 60 * 60) + ' hours',
+      remaining: remaining / (1000 * 60 * 60) + ' hours',
+      localTime: new Date().toLocaleString(),
+      startTime: new Date(start).toLocaleString(),
+      endTime: new Date(end).toLocaleString()
+    });
+  };
+
+  // Call verifyTimeSync when activeHackathon changes
+  useEffect(() => {
+    if (activeHackathon) {
+      verifyTimeSync(activeHackathon);
+    }
+  }, [activeHackathon]);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -256,6 +373,16 @@ const UserDashboard = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
           {error}
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert 
+          severity="success" 
+          sx={{ mb: 2 }} 
+          onClose={() => setSuccess('')}
+        >
+          {success}
         </Alert>
       )}
 
@@ -388,13 +515,13 @@ const UserDashboard = () => {
                     />
                   </Box>
                   <Typography variant="body2" color="text.secondary">
-                    {new Date(hackathon.startTime).toLocaleString()} - 
-                    {new Date(hackathon.endTime).toLocaleString()}
+                    {formatDateWithTimezone(hackathon.startTime)} - 
+                    {formatDateWithTimezone(hackathon.endTime)}
                   </Typography>
                   {hackathon.solution && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body2">
-                        Submitted at: {new Date(hackathon.solution.submissionTime!).toLocaleString()}
+                        Submitted at: {formatDateWithTimezone(hackathon.solution.submissionTime!)}
                       </Typography>
                       <Typography variant="body2">
                         GitHub URL: <Link href={hackathon.solution.githubUrl!}>{hackathon.solution.githubUrl}</Link>

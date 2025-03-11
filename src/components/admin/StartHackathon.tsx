@@ -89,7 +89,8 @@ const StartHackathon = () => {
       const params = {
         hackathonName,
         durationInHours: durationInHours.toString(),
-        teamNames: selectedTeams.join(',')
+        teamNames: selectedTeams.join(','),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // Send client timezone
       };
 
       const response = await api.post('/hackathon/start', null, { 

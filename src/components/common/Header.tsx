@@ -35,7 +35,6 @@ const Header: React.FC = () => {
 
   const menuItems: MenuItem[] = [
     { text: 'Home', path: '/' },
-    { text: 'Profile', path: '/profile' },
   ];
 
   const authItems: MenuItem[] = isAuthenticated

@@ -19,22 +19,70 @@ const SubmitSolution = ({ teamId, onSubmissionComplete }: SubmitSolutionProps) =
   const [hostedUrl, setHostedUrl] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateUrls = () => {
+    try {
+      new URL(githubUrl); // Validate GitHub URL
+      if (hostedUrl) new URL(hostedUrl); // Validate hosted URL if provided
+      return true;
+    } catch (e) {
+      setError('Please enter valid URLs');
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Debug logs
+    console.log('Form submission started');
+    console.log('Team ID:', teamId);
+    console.log('GitHub URL:', githubUrl);
+    console.log('Hosted URL:', hostedUrl);
+
+    if (!teamId) {
+      setError('Team ID is missing');
+      return;
+    }
+
+    if (!validateUrls()) return;
+
+    setIsSubmitting(true);
+    setError('');
+    setSuccess('');
+
     try {
-      await api.post(`/hackathon/submit/${teamId}`, null, {
-        params: {
-          githubUrl,
-          hostedUrl
-        }
+      // Changed to send data in request body instead of query params
+      const response = await api.post(`/hackathon/submit/${teamId}`, {
+        githubUrl,
+        hostedUrl
       });
-      setSuccess('Solution submitted successfully!');
-      setError('');
-      onSubmissionComplete();
-    } catch (err) {
-      setError('Failed to submit solution');
-      setSuccess('');
+
+      console.log('API Response:', response);
+      
+      if (response.data) {
+        console.log('Response data:', response.data);
+        setSuccess('Solution submitted successfully!');
+        onSubmissionComplete();
+      } else {
+        throw new Error('No response data received');
+      }
+    } catch (err: any) {
+      console.error('Detailed error:', {
+        message: err.message,
+        response: err.response,
+        status: err.response?.status,
+        data: err.response?.data
+      });
+      
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        'Failed to submit solution. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -55,6 +103,8 @@ const SubmitSolution = ({ teamId, onSubmissionComplete }: SubmitSolutionProps) =
           onChange={(e) => setGithubUrl(e.target.value)}
           required
           sx={{ mb: 2 }}
+          error={!!error && error.includes('URL')}
+          helperText="Example: https://github.com/username/repository"
         />
         <TextField
           fullWidth
@@ -62,14 +112,16 @@ const SubmitSolution = ({ teamId, onSubmissionComplete }: SubmitSolutionProps) =
           value={hostedUrl}
           onChange={(e) => setHostedUrl(e.target.value)}
           sx={{ mb: 2 }}
+          error={!!error && error.includes('URL')}
+          helperText="Example: https://your-app.herokuapp.com"
         />
         <Button
           type="submit"
           variant="contained"
           fullWidth
-          disabled={!githubUrl}
+          disabled={!githubUrl || isSubmitting}
         >
-          Submit Solution
+          {isSubmitting ? 'Submitting...' : 'Submit Solution'}
         </Button>
       </Box>
     </Paper>
