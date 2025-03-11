@@ -91,15 +91,6 @@ const UserDashboard = () => {
   const [success, setSuccess] = useState<string>('');
 
   // Add this helper function at the top level
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const formatDateWithTimezone = (date: string) => {
     // Create a date object in UTC

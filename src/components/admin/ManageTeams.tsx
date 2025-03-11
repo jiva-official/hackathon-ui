@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -15,7 +15,6 @@ import {
   CircularProgress,
   Alert,
   Paper,
-  Divider,
   Button,
   DialogActions,
   DialogContentText,
@@ -25,7 +24,6 @@ import {
   MenuItem,
   Link,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { api } from '../../services/auth';
 
 interface TeamMember {
@@ -295,36 +293,6 @@ const TeamDetailDialog = ({ team, onClose }: {
   );
 };
 
-const AssignProblemDialog = memo(({ 
-  team, 
-  problem,
-  hackathonId,
-  open, 
-  onClose,
-  onConfirm 
-}: {
-  team: Team | null;
-  problem: any;
-  hackathonId: string;
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => Promise<void>;
-}) => (
-  <Dialog open={open} onClose={onClose}>
-    <DialogTitle>Confirm Problem Assignment</DialogTitle>
-    <DialogContent>
-      <DialogContentText>
-        Are you sure you want to assign problem "{problem?.title}" to team "{team?.teamName}"?
-      </DialogContentText>
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={onClose}>Cancel</Button>
-      <Button onClick={onConfirm} color="primary" variant="contained">
-        Assign Problem
-      </Button>
-    </DialogActions>
-  </Dialog>
-));
 
 const ManageTeams = () => {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -332,7 +300,7 @@ const ManageTeams = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedHackathonId, setSelectedHackathonId] = useState('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
 
@@ -360,11 +328,6 @@ const ManageTeams = () => {
     }
   };
 
-  const handleDeleteClick = (team: Team, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent opening team details
-    setTeamToDelete(team);
-    setDeleteDialogOpen(true);
-  };
 
   const handleDeleteConfirm = async () => {
     if (!teamToDelete) return;
