@@ -23,6 +23,9 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CloseIcon from '@mui/icons-material/Close';
+import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
+import ExtensionIcon from '@mui/icons-material/Extension';
+import AbcIcon from '@mui/icons-material/Abc';
 import { api } from '../../services/auth';
 
 interface HackathonParticipation {
@@ -888,19 +891,22 @@ const SimpleGames = () => {
       id: 'tictactoe',
       name: 'Tic Tac Toe',
       description: 'Classic game of X\'s and O\'s. Play with a teammate!',
-      component: <TicTacToe />
+      component: <TicTacToe />,
+      icon: <SportsEsportsIcon sx={{ fontSize: 40, color: 'primary.main' }} />
     },
     {
       id: 'memory',
       name: 'Memory Match',
       description: 'Test your memory by matching pairs',
-      component: <MemoryGame />
+      component: <MemoryGame />,
+      icon: <ExtensionIcon sx={{ fontSize: 40, color: 'secondary.main' }} />
     },
     {
       id: 'wordscramble',
       name: 'Word Scramble',
       description: 'Unscramble coding-related words',
-      component: <WordScramble />
+      component: <WordScramble />,
+      icon: <AbcIcon sx={{ fontSize: 40, color: 'success.main' }} />
     }
   ];
 
@@ -913,18 +919,33 @@ const SimpleGames = () => {
         Play these simple games alone or with your teammates while waiting for your next hackathon!
       </Typography>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={3}>
         {games.map((game) => (
           <Grid item xs={12} sm={6} md={4} key={game.id}>
             <Card 
               sx={{ 
                 cursor: 'pointer',
-                '&:hover': { boxShadow: 6 }
+                height: '100%',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': { 
+                  transform: 'translateY(-4px)',
+                  boxShadow: 6 
+                }
               }}
               onClick={() => setSelectedGame(game.id)}
             >
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+              <CardContent sx={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                height: '100%',
+                p: 3
+              }}>
+                <Box sx={{ mb: 2 }}>
+                  {game.icon}
+                </Box>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                   {game.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -941,13 +962,34 @@ const SimpleGames = () => {
         onClose={() => setSelectedGame(null)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            bgcolor: 'background.paper'
+          }
+        }}
       >
-        <Box sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              {games.find(g => g.id === selectedGame)?.name}
-            </Typography>
-            <IconButton onClick={() => setSelectedGame(null)}>
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: 3 
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {games.find(g => g.id === selectedGame)?.icon}
+              <Typography variant="h6">
+                {games.find(g => g.id === selectedGame)?.name}
+              </Typography>
+            </Box>
+            <IconButton 
+              onClick={() => setSelectedGame(null)}
+              sx={{ 
+                '&:hover': { 
+                  bgcolor: 'action.hover' 
+                } 
+              }}
+            >
               <CloseIcon />
             </IconButton>
           </Box>
