@@ -18,8 +18,11 @@ import {
   Link,
   Card,
   CardContent,
+  Grid,
+  IconButton,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CloseIcon from '@mui/icons-material/Close';
 import { api } from '../../services/auth';
 
 interface HackathonParticipation {
@@ -602,6 +605,8 @@ const UserDashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <SimpleGames />
     </Box>
   );
 };
@@ -686,5 +691,273 @@ const ProblemStatementView = ({ problem }: { problem: ProblemStatement }) => (
     )}
   </Paper>
 );
+
+// Simple TicTacToe Game
+const TicTacToe = () => {
+  const [board, setBoard] = useState(Array(9).fill(null));
+  const [xIsNext, setXIsNext] = useState(true);
+  
+  const calculateWinner = (squares: string[]) => {
+    const lines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6] // diagonals
+    ];
+    for (let i = 0; i < lines.length; i++) {
+      const [a, b, c] = lines[i];
+      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+        return squares[a];
+      }
+    }
+    return null;
+  };
+
+  const handleClick = (i: number) => {
+    if (calculateWinner(board) || board[i]) return;
+    const newBoard = board.slice();
+    newBoard[i] = xIsNext ? 'X' : 'O';
+    setBoard(newBoard);
+    setXIsNext(!xIsNext);
+  };
+
+  const winner = calculateWinner(board);
+  const status = winner
+    ? `Winner: ${winner}`
+    : board.every(square => square)
+    ? 'Draw!'
+    : `Next player: ${xIsNext ? 'X' : 'O'}`;
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>{status}</Typography>
+      <Grid container spacing={1} sx={{ width: 300 }}>
+        {board.map((square, i) => (
+          <Grid item xs={4} key={i}>
+            <Button
+              variant="outlined"
+              onClick={() => handleClick(i)}
+              sx={{
+                height: 80,
+                width: '100%',
+                fontSize: '2rem'
+              }}
+            >
+              {square}
+            </Button>
+          </Grid>
+        ))}
+      </Grid>
+      <Button 
+        sx={{ mt: 2 }}
+        variant="contained"
+        onClick={() => setBoard(Array(9).fill(null))}
+      >
+        Reset Game
+      </Button>
+    </Box>
+  );
+};
+
+// Memory Game Component
+const MemoryGame = () => {
+  const [cards, setCards] = useState<number[]>([]);
+  const [flipped, setFlipped] = useState<number[]>([]);
+  const [matched, setMatched] = useState<number[]>([]);
+  const [moves, setMoves] = useState(0);
+
+  const initializeGame = () => {
+    const numbers = [...Array(8)].map((_, i) => i).concat([...Array(8)].map((_, i) => i));
+    setCards(numbers.sort(() => Math.random() - 0.5));
+    setFlipped([]);
+    setMatched([]);
+    setMoves(0);
+  };
+
+  useEffect(() => {
+    initializeGame();
+  }, []);
+
+  const handleClick = (index: number) => {
+    if (flipped.length === 2) return;
+    if (flipped.includes(index) || matched.includes(index)) return;
+
+    const newFlipped = [...flipped, index];
+    setFlipped(newFlipped);
+
+    if (newFlipped.length === 2) {
+      setMoves(m => m + 1);
+      if (cards[newFlipped[0]] === cards[newFlipped[1]]) {
+        setMatched([...matched, ...newFlipped]);
+        setFlipped([]);
+      } else {
+        setTimeout(() => setFlipped([]), 1000);
+      }
+    }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>Moves: {moves}</Typography>
+      <Grid container spacing={1} sx={{ maxWidth: 400 }}>
+        {cards.map((number, index) => (
+          <Grid item xs={3} key={index}>
+            <Button
+              variant="contained"
+              sx={{
+                height: 60,
+                width: '100%',
+                bgcolor: matched.includes(index) ? 'success.light' : 
+                         flipped.includes(index) ? 'primary.main' : 'grey.300'
+              }}
+              onClick={() => handleClick(index)}
+            >
+              {(flipped.includes(index) || matched.includes(index)) && number}
+            </Button>
+          </Grid>
+        ))}
+      </Grid>
+      <Button sx={{ mt: 2 }} variant="contained" onClick={initializeGame}>
+        New Game
+      </Button>
+    </Box>
+  );
+};
+
+// Word Scramble Game
+const WordScramble = () => {
+  const words = ['HACKATHON', 'PROGRAMMING', 'DEVELOPER', 'JAVASCRIPT', 'TYPESCRIPT'];
+  const [currentWord, setCurrentWord] = useState('');
+  const [scrambledWord, setScrambledWord] = useState('');
+  const [userInput, setUserInput] = useState('');
+  const [score, setScore] = useState(0);
+
+  const scrambleWord = (word: string) => {
+    return word.split('').sort(() => Math.random() - 0.5).join('');
+  };
+
+  const newGame = () => {
+    const word = words[Math.floor(Math.random() * words.length)];
+    setCurrentWord(word);
+    setScrambledWord(scrambleWord(word));
+    setUserInput('');
+  };
+
+  useEffect(() => {
+    newGame();
+  }, []);
+
+  const handleSubmit = () => {
+    if (userInput.toUpperCase() === currentWord) {
+      setScore(s => s + 1);
+      newGame();
+    }
+  };
+
+  return (
+    <Box sx={{ textAlign: 'center' }}>
+      <Typography variant="h6" gutterBottom>Score: {score}</Typography>
+      <Typography variant="h4" sx={{ mb: 3, color: 'primary.main' }}>
+        {scrambledWord}
+      </Typography>
+      <Box sx={{ mb: 2 }}>
+        <input
+          style={{
+            padding: '10px',
+            fontSize: '1.2rem',
+            width: '200px',
+            textAlign: 'center'
+          }}
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value.toUpperCase())}
+          placeholder="Enter your guess"
+        />
+      </Box>
+      <Button variant="contained" onClick={handleSubmit}>
+        Submit
+      </Button>
+    </Box>
+  );
+};
+
+// Main Games Component
+const SimpleGames = () => {
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
+
+  const games = [
+    {
+      id: 'tictactoe',
+      name: 'Tic Tac Toe',
+      description: 'Classic game of X\'s and O\'s. Play with a teammate!',
+      component: <TicTacToe />
+    },
+    {
+      id: 'memory',
+      name: 'Memory Match',
+      description: 'Test your memory by matching pairs',
+      component: <MemoryGame />
+    },
+    {
+      id: 'wordscramble',
+      name: 'Word Scramble',
+      description: 'Unscramble coding-related words',
+      component: <WordScramble />
+    }
+  ];
+
+  return (
+    <Box sx={{ mt: 3 }}>
+      <Typography variant="h5" gutterBottom>
+        Quick Games While You Wait
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Play these simple games alone or with your teammates while waiting for your next hackathon!
+      </Typography>
+
+      <Grid container spacing={2}>
+        {games.map((game) => (
+          <Grid item xs={12} sm={6} md={4} key={game.id}>
+            <Card 
+              sx={{ 
+                cursor: 'pointer',
+                '&:hover': { boxShadow: 6 }
+              }}
+              onClick={() => setSelectedGame(game.id)}
+            >
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {game.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {game.description}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      <Dialog 
+        open={!!selectedGame} 
+        onClose={() => setSelectedGame(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <Box sx={{ p: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              {games.find(g => g.id === selectedGame)?.name}
+            </Typography>
+            <IconButton onClick={() => setSelectedGame(null)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            {games.find(g => g.id === selectedGame)?.component}
+          </Box>
+        </Box>
+      </Dialog>
+    </Box>
+  );
+};
 
 export default UserDashboard;
