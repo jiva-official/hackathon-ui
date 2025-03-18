@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hackathon-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hackathon-ui
+  template:
+    metadata:
+      labels:
+        app: hackathon-ui
+    spec:
+      containers:
+        - name: hackathon-ui
+          image: jivaofficial/hachathon-react-ui:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hackathon-ui-service
+spec:
+  selector:
+    app: hackathon-ui
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
